@@ -37,6 +37,11 @@
 
     websocket.onclose = function (evt) {
         console.log("connection closed");
+        var msg = JSON.stringify({
+          action: "logout",
+          user: localStorage.getItem("username");
+        });
+        websocket.send(msg);
     };
 
     websocket.onmessage = function (evt) {
