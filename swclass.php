@@ -10,6 +10,9 @@ class Server{
     'open_cpu_affinity'=>1,
     'open_http2_protocol'=>true,
   );
+  /*
+  server parameters
+  */
   private static $serv = null;
 
   private static $table;
@@ -34,8 +37,8 @@ class Server{
     return self::$instance;
   }
 
-  public static function createTable(){
-    self::$table=new swoole_table(1024);
+  public static function initTable(){
+    self::$table = new swoole_table(1024);
     self::$table->column('id', swoole_Table::TYPE_INT, 4);
     self::$table->create();
     return self::$instance;
@@ -55,14 +58,19 @@ class Server{
     });
 
     self::$serv->on('message', function($server, $frame){
-    	  $name = json_decode($frame->data)->{'message'};
-
-        self::$table->set("{$name}", array('id'=>$frame->fd));
-        foreach(self::$table as $key=>$value){
-          var_dump($key, $value);
+        $action = json_decode($frame->data)->{'action'};
+        if($action === "login"){
+        	$user = json_decode($frame->data)->{'user'};
+          self::$table->set("{$user}", array('id'=>$frame->fd));
+        }else if($action === "sendTo"){
+          $to = json_decode($frame->data)->{'to'};
+          if(self::$table->get($to)){
+            self::$serv->push(self::$table->get($to)['id'], "update");
+          }
+        }else if($action === "logout"){
+          $user = json_decode($frame->data)->{'user'};
+          self::$table::del($user);
         }
-
-        self::$serv->push(self::$table->get("dc")['id'], "received message from {$name}");
     });
 
     self::$serv->on('request', function($request, $response){
@@ -82,5 +90,5 @@ ini_set('display_errors', 1);
 ini_set('displat_startup_errors', 1);
 error_reporting(E_ALL);
 
-Server::getInstance()->setConf()->createTable()->run();
+Server::getInstance()->setConf()->initTable()->run();
 ?>

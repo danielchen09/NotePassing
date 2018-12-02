@@ -2,7 +2,31 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script>
+
+    const getAllTo = function(username){
+      $.ajax({
+        url:"SQLHandler.php",
+        type:"POST",
+        data:{
+          action:"getAllTo",
+          user:username
+        },
+        success: function(results){
+          var arr = JSON.parse(results);
+          var content = "";
+          for(index in arr){
+            content += `<tr><td>${arr[index].text}</td></tr>`;
+          }
+          document.getElementById("content").innerHTML = content;
+        },
+        fail: function(){
+          console.log("failed");
+        }
+      });
+    }
+
     //var wsServer = 'ws://172.16.1.37:8080';
     var websocket = new WebSocket('ws://192.168.50.43:9502');
 
@@ -17,25 +41,79 @@
 
     websocket.onmessage = function (evt) {
         console.log('data: ' + evt.data);
+        if(evt.data === "update"){
+          getAllTo(localStorage.getItem("username"));
+        }
     };
 
     websocket.onerror = function (evt, e) {
         console.log('error: ' + evt.data);
     };
 
-    const send_msg = function(){
-      var text = document.getElementById("in").value;
+    const login = function(){
+      localStorage.setItem("username", document.getElementById("in").value);
       var msg = JSON.stringify({
-        message:text,
+        action:"login",
+        user:document.getElementById("in").value,
       });
       websocket.send(msg);
+      getAllTo(document.getElementById("in").value);
+      document.getElementById("loginstatus").innerHTML = `logged in as ${localStorage.getItem("username")}`;
     }
+
+    const send = function(){
+      if(!localStorage.getItem("username")){
+        alert("please login");
+        return;
+      }
+      //prevent SQLHandler slower than server
+      new Promise(function(resolve, reject){
+        $.ajax({
+          url:"SQLHandler.php",
+          type:"POST",
+          data:{
+            action:"addNote",
+            Ufrom:localStorage.getItem("username"),
+            Uto:document.getElementById("to").value,
+            text:document.getElementById("note").value
+          },
+          success: function(results){
+            resolve("sent");
+          },
+          fail: function(){
+            resolve("failed");
+          }
+        });
+      }).then(function(result){
+        var msg = JSON.stringify({
+          action:"sendTo",
+          to:document.getElementById("to").value,
+        });
+        websocket.send(msg);
+      });
+    }
+
 
     </script>
   </head>
   <body>
     <p>username:</p>
     <input type="text" id="in">
-    <button onclick="send_msg()">send</button>
+    <button onclick="login()">login</button>
+    <br>
+    <p>send to:</p>
+    <input type="text" id="to">
+    <br>
+    <p>note: </p>
+    <input type="text" id="note">
+    <br>
+    <button onclick="send()">send</button>
+    <br>
+    <p id="loginstatus">
+
+    </p>
+    <table id="content">
+
+    </table>
   </body>
 </html>
