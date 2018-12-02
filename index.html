@@ -1,0 +1,41 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <script>
+    //var wsServer = 'ws://172.16.1.37:8080';
+    var websocket = new WebSocket('ws://192.168.50.43:9502');
+
+    websocket.onopen = function (evt) {
+        console.log(evt);
+        console.log("connection successful");
+    };
+
+    websocket.onclose = function (evt) {
+        console.log("connection closed");
+    };
+
+    websocket.onmessage = function (evt) {
+        console.log('data: ' + evt.data);
+    };
+
+    websocket.onerror = function (evt, e) {
+        console.log('error: ' + evt.data);
+    };
+
+    const send_msg = function(){
+      var text = document.getElementById("in").value;
+      var msg = JSON.stringify({
+        message:text,
+      });
+      websocket.send(msg);
+    }
+
+    </script>
+  </head>
+  <body>
+    <p>username:</p>
+    <input type="text" id="in">
+    <button onclick="send_msg()">send</button>
+  </body>
+</html>
